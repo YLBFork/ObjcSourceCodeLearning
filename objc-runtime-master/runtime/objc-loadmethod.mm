@@ -181,11 +181,12 @@ void remove_category_from_loadable_list(Category cat)
 *
 * Called only by call_load_methods().
 **********************************************************************/
+//方法里面循环的次数是loadable_classes_used，
 static void call_class_loads(void)
 {
     int i;
     
-    // Detach current loadable list.
+    // Detach current loadable list.分离当前可加载列表。
     struct loadable_class *classes = loadable_classes;
     int used = loadable_classes_used;
     loadable_classes = nil;
@@ -305,10 +306,14 @@ static bool call_category_loads(void)
 
 /***********************************************************************
 * call_load_methods
+调用所有类与分类的+load方法。
+父类的+load方法优先执行，分类的+load方法在类的+load方法之后执行。
+ 
 * Call all pending class and category +load methods.
 * Class +load methods are called superclass-first. 
 * Category +load methods are not called until after the parent class's +load.
-* 
+*
+ 这个方法必须是可以重载的，因为+load方法会触发更多的镜像映射。
 * This method must be RE-ENTRANT, because a +load could trigger 
 * more image mapping. In addition, the superclass-first ordering 
 * must be preserved in the face of re-entrant calls. Therefore, 
@@ -334,6 +339,12 @@ static bool call_category_loads(void)
 * Locking: loadMethodLock must be held by the caller 
 *   All other locks must not be held.
 **********************************************************************/
+/**
+ call_load_methods方法的大致流程：
+ 1. 循环调用call_class_loads方法，直到没有可执行的+load方法。
+ 2. 调用call_category_loads方法。
+ 3. 重复1->2,直到所有的类和分类的+load方法都执行完毕。
+ */
 void call_load_methods(void)
 {
     static bool loading = NO;
